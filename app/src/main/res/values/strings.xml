@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Android Arduino Comm 2</string>
+    <string name="unknown_device">Unknown device</string>
 </resources>
