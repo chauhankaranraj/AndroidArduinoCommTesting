@@ -12,9 +12,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -34,10 +36,19 @@ public class MainActivity extends ListActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+//        getActionBar().setTitle("BLE Device Scan");   // adding this line gives error
+
+        //Initialize Handler
+        mHandler = new Handler();
 
         // Initializes Bluetooth adapter.
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
 
         // Ensures Bluetooth is available on the device and it is enabled.
         // If not, displays a dialog requesting user permission to enable Bluetooth.
@@ -46,18 +57,13 @@ public class MainActivity extends ListActivity {
             startActivityForResult(enableBtIntent, ENABLE_BT_REQUEST);
         }
 
-        //Initialize Handler
-        mHandler = new Handler();
-
         // Initialize ListView Adapter and set it as the adapter for MainActivity ListView
         mLeDeviceListAdapter = new LeDeviceListAdapter();
         setListAdapter(mLeDeviceListAdapter);
 
         // Start scanning for devices
-        scanLeDevice(true);
-
+        scanLeDevice(true);        
     }
-
 
     // adding this does nothing different. Consider removing it or fixing issue
     @Override
@@ -70,10 +76,38 @@ public class MainActivity extends ListActivity {
         } else {
             menu.findItem(R.id.menu_stop).setVisible(true);
             menu.findItem(R.id.menu_scan).setVisible(false);
-            menu.findItem(R.id.menu_refresh).setActionView(
-                    R.layout.actionbar_indeterminate_progress);
+            menu.findItem(R.id.menu_refresh).setActionView(R.layout.actionbar_indeterminate_progress);
         }
         return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_scan:
+                mLeDeviceListAdapter.clear();
+                scanLeDevice(true);
+                break;
+            case R.id.menu_stop:
+                scanLeDevice(false);
+                break;
+        }
+        return true;
+    }
+
+    // FIXME: 11/25/16 crashes when item is clicked
+    @Override
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+        final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
+        if (device == null) return;
+        final Intent intent = new Intent(this, TestActivity.class);
+        intent.putExtra(TestActivity.EXTRAS_DEVICE_NAME, device.getName());
+        intent.putExtra(TestActivity.EXTRAS_DEVICE_ADDRESS, device.getAddress());
+        if (mScanning) {
+            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            mScanning = false;
+        }
+        startActivity(intent);
     }
 
     private void scanLeDevice(final boolean enable) {
@@ -87,7 +121,6 @@ public class MainActivity extends ListActivity {
                 }
             }, SCAN_PERIOD);
 
-            Log.v(TAG, "scanning");
             mScanning = true;
             mBluetoothAdapter.startLeScan(mLeScanCallback);
         } else {
@@ -105,7 +138,6 @@ public class MainActivity extends ListActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Log.v(TAG, "adding device...");
                             mLeDeviceListAdapter.addDevice(device);
                             mLeDeviceListAdapter.notifyDataSetChanged();
                         }
@@ -116,12 +148,12 @@ public class MainActivity extends ListActivity {
     // Adapter for holding devices found through scanning.
     private class LeDeviceListAdapter extends BaseAdapter {
         private ArrayList<BluetoothDevice> mLeDevices;
-        private LayoutInflater mInflator;
+        private LayoutInflater mInflater;
 
         public LeDeviceListAdapter() {
             super();
             mLeDevices = new ArrayList<BluetoothDevice>();
-            mInflator = MainActivity.this.getLayoutInflater();
+            mInflater = MainActivity.this.getLayoutInflater();
         }
 
         public void addDevice(BluetoothDevice device) {
@@ -160,7 +192,7 @@ public class MainActivity extends ListActivity {
 
             // General ListView optimization code.
             if (view == null) {
-                view = mInflator.inflate(R.layout.listitem_device, null);
+                view = mInflater.inflate(R.layout.listitem_device, null);
                 viewHolder = new ViewHolder();
                 viewHolder.deviceAddress = (TextView) view.findViewById(R.id.device_address);
                 viewHolder.deviceName = (TextView) view.findViewById(R.id.device_name);
