@@ -6,12 +6,16 @@
 
     <TextView
         android:id="@+id/device_name"
+        android:padding="5dp"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Device Name"/>
 
     <TextView
+        android:padding="5dp"
         android:id="@+id/device_address"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Medium"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Device Address"/>
